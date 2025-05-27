@@ -37,6 +37,27 @@ class OpenAIClient:
         except Exception as e:
             raise OpenAIError(f"Error creando assistant: {str(e)}")
     
+    def update_assistant(self, assistant_id: str, faqs: List[Dict[str, str]]) -> str:
+        """Actualiza un assistant existente con nuevas FAQs"""
+        try:
+            # Crear contenido actualizado para el assistant
+            instructions = "Eres un asistente virtual que responde preguntas basándote en las siguientes FAQs:\n\n"
+            for faq in faqs:
+                instructions += f"P: {faq['q']}\nR: {faq['a']}\n\n"
+            
+            instructions += "Responde de manera clara y concisa. Si la pregunta no está relacionada con las FAQs, indica amablemente que solo puedes responder sobre los temas incluidos."
+            
+            # Actualizar assistant
+            assistant = self.client.beta.assistants.update(
+                assistant_id=assistant_id,
+                instructions=instructions,
+                model="gpt-4-turbo-preview"
+            )
+            
+            return assistant.id
+        except Exception as e:
+            raise OpenAIError(f"Error actualizando assistant: {str(e)}")
+    
     def get_answer(self, agent_id: str, text: str) -> str:
         """Obtiene respuesta del assistant para el texto dado"""
         try:
@@ -86,6 +107,10 @@ openai_client = OpenAIClient()
 # Funciones de conveniencia
 def create_assistant(faqs: List[Dict[str, str]]) -> str:
     return openai_client.create_assistant(faqs)
+
+
+def update_assistant(assistant_id: str, faqs: List[Dict[str, str]]) -> str:
+    return openai_client.update_assistant(assistant_id, faqs)
 
 
 def get_answer(agent_id: str, text: str) -> str:
