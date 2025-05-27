@@ -57,6 +57,33 @@ FAQS = [
     }
 ]
 
+# Parámetros de personalidad por defecto
+PERSONALIDAD = {
+    "AGENT_NAME": "re",
+    "COMPANY_NAME": "released",
+    "TONE": "profesional, cercano y servicial",
+    "FORMALITY": "tuteo; cambia a 'usted' si el usuario lo usa",
+    "ARCHETYPE": "Agente experto, amable y resolutivo",
+    "EMOJI_LIMIT": "100",
+    "IA_INTRO": "Soy Released, tu asistente de IA para alquileres vacacionales.",
+    "ESCALATION_TIME": "15",
+    "UPSELLING_STYLE": "Oferta clara, sin presión.",
+    "FORBIDDEN_WORDS": "ninguna",
+    "SILENCE_HOURS": "No presenta silencio",
+    "LANGUAGE": "español neutro",
+    "COMPANY_DESCRIPTION": "released es una solución innovadora de inteligencia artificial diseñada para optimizar la gestión de alquileres vacacionales. Nuestro servicio proporciona agentes de IA personalizados que responden automáticamente a todas las consultas de los huéspedes, las 24 horas del día, los 7 días de la semana.",
+    "WELCOME_MESSAGE": "¡Hola! Soy el agente de IA de released, mi nombre es re. ¿Con quién tengo el placer de hablar?",
+    "SUPPORT_CONTACT": "Para contactar con soporte pueden escribir o llamar al número +34 674 62 06 69.",
+    "EXTRA_RULES": ""
+}
+
+def generar_prompt_personalizado(path_prompt, params):
+    with open(path_prompt, "r", encoding="utf-8") as f:
+        prompt = f.read()
+    for key, value in params.items():
+        prompt = prompt.replace("{" + key + "}", value)
+    return prompt
+
 # ===== FIN DE CONFIGURACIÓN =====
 
 
@@ -85,7 +112,9 @@ def listar_clientes():
 
 def crear_cliente():
     """Crear un cliente a través de la API"""
-    
+    # Generar el prompt personalizado
+    prompt = generar_prompt_personalizado("data/prompt.txt", PERSONALIDAD)
+
     # Preparar los datos
     data = {
         "name": CLIENTE["name"],
@@ -93,7 +122,8 @@ def crear_cliente():
         "phone_number_id": CLIENTE["phone_number_id"],
         "faqs": FAQS,
         "welcome_message": CLIENTE.get("welcome_message"),
-        "business_hours": CLIENTE.get("business_hours")
+        "business_hours": CLIENTE.get("business_hours"),
+        "system_prompt": prompt
     }
     
     # Hacer la petición
