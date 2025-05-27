@@ -24,6 +24,7 @@ class CreateClientRequest(BaseModel):
     faqs: List[FAQ]
     welcome_message: Optional[str] = None
     business_hours: Optional[str] = None
+    system_prompt: Optional[str] = None
 
 
 class UpdateClientRequest(BaseModel):
@@ -71,14 +72,20 @@ async def create_client(
         )
         existing = result.scalar_one_or_none()
         
-        # Crear/actualizar assistant en OpenAI con las FAQs
-        print(f"📝 {'Actualizando' if existing else 'Creando'} assistant para {request.name} con {len(request.faqs)} FAQs...")
+        # Usar el system_prompt si está presente, si no, generar uno básico con las FAQs
+        if request.system_prompt:
+            instructions = request.system_prompt
+        else:
+            instructions = "Eres un asistente virtual que responde preguntas basándote en las siguientes FAQs:\n\n"
+            for faq in request.faqs:
+                instructions += f"P: {faq['q']}\nR: {faq['a']}\n\n"
+            instructions += "Responde de manera clara y concisa. Si la pregunta no está relacionada con las FAQs, indica amablemente que solo puedes responder sobre los temas incluidos."
         faqs_dict = [{"q": faq.q, "a": faq.a} for faq in request.faqs]
         
         if existing:
             print(f"⚠️ Cliente existente encontrado (ID: {existing.id}). Se actualizará con la nueva información.")
             # Actualizar el assistant existente
-            assistant_id = update_assistant(existing.assistant_id, faqs_dict)
+            assistant_id = update_assistant(existing.assistant_id, faqs_dict, instructions=instructions)
             print(f"✅ Assistant actualizado: {assistant_id}")
             
             # Actualizar cliente existente
@@ -108,7 +115,7 @@ async def create_client(
             )
         else:
             # Crear nuevo assistant
-            assistant_id = create_assistant(faqs_dict)
+            assistant_id = create_assistant(faqs_dict, instructions=instructions)
             print(f"✅ Assistant creado: {assistant_id}")
             
             # Crear nuevo cliente

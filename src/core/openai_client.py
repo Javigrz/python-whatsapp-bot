@@ -16,44 +16,36 @@ class OpenAIClient:
             default_headers={"OpenAI-Beta": "assistants=v2"}
         )
     
-    def create_assistant(self, faqs: List[Dict[str, str]]) -> str:
-        """Crea un assistant de OpenAI con las FAQs proporcionadas"""
+    def create_assistant(self, faqs: List[Dict[str, str]], instructions: str = None) -> str:
+        """Crea un assistant de OpenAI con las FAQs proporcionadas y/o un prompt personalizado"""
         try:
-            # Crear contenido para el assistant
-            instructions = "Eres un asistente virtual que responde preguntas basándote en las siguientes FAQs:\n\n"
-            for faq in faqs:
-                instructions += f"P: {faq['q']}\nR: {faq['a']}\n\n"
-            
-            instructions += "Responde de manera clara y concisa. Si la pregunta no está relacionada con las FAQs, indica amablemente que solo puedes responder sobre los temas incluidos."
-            
-            # Crear assistant
+            if not instructions:
+                instructions = "Eres un asistente virtual que responde preguntas basándote en las siguientes FAQs:\n\n"
+                for faq in faqs:
+                    instructions += f"P: {faq['q']}\nR: {faq['a']}\n\n"
+                instructions += "Responde de manera clara y concisa. Si la pregunta no está relacionada con las FAQs, indica amablemente que solo puedes responder sobre los temas incluidos."
             assistant = self.client.beta.assistants.create(
-                model="gpt-4-turbo-preview",
+                model="gpt-4o-mini",
                 instructions=instructions,
                 name="WhatsApp Business Assistant"
             )
-            
             return assistant.id
         except Exception as e:
             raise OpenAIError(f"Error creando assistant: {str(e)}")
     
-    def update_assistant(self, assistant_id: str, faqs: List[Dict[str, str]]) -> str:
-        """Actualiza un assistant existente con nuevas FAQs"""
+    def update_assistant(self, assistant_id: str, faqs: List[Dict[str, str]], instructions: str = None) -> str:
+        """Actualiza un assistant existente con nuevas FAQs y/o prompt personalizado"""
         try:
-            # Crear contenido actualizado para el assistant
-            instructions = "Eres un asistente virtual que responde preguntas basándote en las siguientes FAQs:\n\n"
-            for faq in faqs:
-                instructions += f"P: {faq['q']}\nR: {faq['a']}\n\n"
-            
-            instructions += "Responde de manera clara y concisa. Si la pregunta no está relacionada con las FAQs, indica amablemente que solo puedes responder sobre los temas incluidos."
-            
-            # Actualizar assistant
+            if not instructions:
+                instructions = "Eres un asistente virtual que responde preguntas basándote en las siguientes FAQs:\n\n"
+                for faq in faqs:
+                    instructions += f"P: {faq['q']}\nR: {faq['a']}\n\n"
+                instructions += "Responde de manera clara y concisa. Si la pregunta no está relacionada con las FAQs, indica amablemente que solo puedes responder sobre los temas incluidos."
             assistant = self.client.beta.assistants.update(
                 assistant_id=assistant_id,
                 instructions=instructions,
-                model="gpt-4-turbo-preview"
+                model="gpt-4o-mini"
             )
-            
             return assistant.id
         except Exception as e:
             raise OpenAIError(f"Error actualizando assistant: {str(e)}")
@@ -105,12 +97,12 @@ openai_client = OpenAIClient()
 
 
 # Funciones de conveniencia
-def create_assistant(faqs: List[Dict[str, str]]) -> str:
-    return openai_client.create_assistant(faqs)
+def create_assistant(faqs: List[Dict[str, str]], instructions: str = None) -> str:
+    return openai_client.create_assistant(faqs, instructions)
 
 
-def update_assistant(assistant_id: str, faqs: List[Dict[str, str]]) -> str:
-    return openai_client.update_assistant(assistant_id, faqs)
+def update_assistant(assistant_id: str, faqs: List[Dict[str, str]], instructions: str = None) -> str:
+    return openai_client.update_assistant(assistant_id, faqs, instructions)
 
 
 def get_answer(agent_id: str, text: str) -> str:
