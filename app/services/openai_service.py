@@ -11,25 +11,25 @@ OPENAI_ASSISTANT_ID = os.getenv("OPENAI_ASSISTANT_ID")
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 
-def upload_file(path):
-    # Upload a file with an "assistants" purpose
-    file = client.files.create(
-        file=open("../../data/airbnb-faq.pdf", "rb"), purpose="assistants"
-    )
+# def upload_file(path):
+#     # Upload a file with an "assistants" purpose
+#     file = client.files.create(
+#         file=open("../../data/FAQreleased.pdf", "rb"), purpose="assistants"
+#     )
 
 
-def create_assistant(file):
-    """
-    You currently cannot set the temperature for Assistant via the API.
-    """
-    assistant = client.beta.assistants.create(
-        name="WhatsApp AirBnb Assistant",
-        instructions="You're a helpful WhatsApp assistant that can assist guests that are staying in our Paris AirBnb. Use your knowledge base to best respond to customer queries. If you don't know the answer, say simply that you cannot help with question and advice to contact the host directly. Be friendly and funny.",
-        tools=[{"type": "retrieval"}],
-        model="gpt-4-1106-preview",
-        file_ids=[file.id],
-    )
-    return assistant
+# def create_assistant(file):
+#     """
+#     You currently cannot set the temperature for Assistant via the API.
+#     """
+#     assistant = client.beta.assistants.create(
+#         name="WhatsApp released Assistant",
+#         instructions="Eres un asistente útil de WhatsApp que esta disponible para asistir a los clientes de esta empresa llamada, released. Utiliza tu base de conocimientos para responder a las consultas de los clientes. Si no sabes la respuesta, simplemente di que no puedes ayudar con la pregunta en este momento, que se le informará en cuanto se pueda. Se amable, divertido y trata siempre de que cuando acaben las consultas del cliente seguir los pasos de la calculadora de tu base de datos para aplicarselo al cliente.",
+#         tools=[{"type": "retrieval"}],
+#         model="gpt-4-1106-preview",
+#         file_ids=[file.id],
+#     )
+#     return assistant
 
 
 # Use context manager to ensure the shelf file is closed properly
@@ -69,6 +69,7 @@ def run_assistant(thread, name):
 
 
 def generate_response(message_body, wa_id, name):
+    print(f"recieved:", message_body)
     # Check if there is already a thread_id for the wa_id
     thread_id = check_if_thread_exists(wa_id)
 
@@ -93,5 +94,6 @@ def generate_response(message_body, wa_id, name):
 
     # Run the assistant and get the new message
     new_message = run_assistant(thread, name)
+    print(f"To {name}:", new_message)
 
     return new_message
