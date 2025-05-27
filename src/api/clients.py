@@ -6,7 +6,7 @@ from typing import List, Optional
 from datetime import datetime
 
 from src.core.models import Client
-from src.core.openai_client import create_assistant
+from src.core.openai_client import create_assistant, update_assistant
 from src.api.webhook import get_session
 
 router = APIRouter()
@@ -53,13 +53,16 @@ async def create_client(
     session: AsyncSession = Depends(get_session)
 ):
     """
-    Crear un nuevo cliente.
+    Crear un nuevo cliente o actualizar uno existente si el phone_number_id ya existe.
     
     Proceso:
-    1. Recibe FAQs y datos del cliente
-    2. Crea un assistant en OpenAI con las FAQs
-    3. Guarda el cliente en la base de datos
-    4. Retorna los datos del cliente creado
+    1. Si el phone_number_id existe:
+       - Actualiza el cliente existente con los nuevos datos
+       - Actualiza el assistant en OpenAI con las nuevas FAQs
+    2. Si no existe:
+       - Crea un nuevo assistant en OpenAI con las FAQs
+       - Guarda el nuevo cliente en la base de datos
+    3. Retorna los datos del cliente
     """
     try:
         # Verificar si ya existe un cliente con ese phone_number_id
@@ -68,52 +71,80 @@ async def create_client(
         )
         existing = result.scalar_one_or_none()
         
-        if existing:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Ya existe un cliente con phone_number_id: {request.phone_number_id}"
-            )
-        
-        # Crear assistant en OpenAI con las FAQs
-        print(f"📝 Creando assistant para {request.name} con {len(request.faqs)} FAQs...")
+        # Crear/actualizar assistant en OpenAI con las FAQs
+        print(f"📝 {'Actualizando' if existing else 'Creando'} assistant para {request.name} con {len(request.faqs)} FAQs...")
         faqs_dict = [{"q": faq.q, "a": faq.a} for faq in request.faqs]
-        assistant_id = create_assistant(faqs_dict)
-        print(f"✅ Assistant creado: {assistant_id}")
         
-        # Crear cliente en la base de datos
-        client = Client(
-            name=request.name,
-            phone_number=request.phone_number,
-            phone_number_id=request.phone_number_id,
-            assistant_id=assistant_id,
-            active=True,
-            welcome_message=request.welcome_message,
-            business_hours=request.business_hours
-        )
-        
-        session.add(client)
-        await session.commit()
-        await session.refresh(client)
-        
-        print(f"✅ Cliente '{client.name}' creado exitosamente (ID: {client.id})")
-        
-        return ClientResponse(
-            id=client.id,
-            name=client.name,
-            phone_number=client.phone_number,
-            phone_number_id=client.phone_number_id,
-            assistant_id=client.assistant_id,
-            active=client.active,
-            created_at=client.created_at,
-            updated_at=client.updated_at,
-            welcome_message=client.welcome_message,
-            business_hours=client.business_hours
-        )
+        if existing:
+            print(f"⚠️ Cliente existente encontrado (ID: {existing.id}). Se actualizará con la nueva información.")
+            # Actualizar el assistant existente
+            assistant_id = update_assistant(existing.assistant_id, faqs_dict)
+            print(f"✅ Assistant actualizado: {assistant_id}")
+            
+            # Actualizar cliente existente
+            existing.name = request.name
+            existing.phone_number = request.phone_number
+            existing.assistant_id = assistant_id
+            existing.welcome_message = request.welcome_message
+            existing.business_hours = request.business_hours
+            existing.updated_at = datetime.utcnow()
+            
+            await session.commit()
+            await session.refresh(existing)
+            
+            print(f"✅ Cliente '{existing.name}' actualizado exitosamente (ID: {existing.id})")
+            
+            return ClientResponse(
+                id=existing.id,
+                name=existing.name,
+                phone_number=existing.phone_number,
+                phone_number_id=existing.phone_number_id,
+                assistant_id=existing.assistant_id,
+                active=existing.active,
+                created_at=existing.created_at,
+                updated_at=existing.updated_at,
+                welcome_message=existing.welcome_message,
+                business_hours=existing.business_hours
+            )
+        else:
+            # Crear nuevo assistant
+            assistant_id = create_assistant(faqs_dict)
+            print(f"✅ Assistant creado: {assistant_id}")
+            
+            # Crear nuevo cliente
+            client = Client(
+                name=request.name,
+                phone_number=request.phone_number,
+                phone_number_id=request.phone_number_id,
+                assistant_id=assistant_id,
+                active=True,
+                welcome_message=request.welcome_message,
+                business_hours=request.business_hours
+            )
+            
+            session.add(client)
+            await session.commit()
+            await session.refresh(client)
+            
+            print(f"✅ Cliente '{client.name}' creado exitosamente (ID: {client.id})")
+            
+            return ClientResponse(
+                id=client.id,
+                name=client.name,
+                phone_number=client.phone_number,
+                phone_number_id=client.phone_number_id,
+                assistant_id=client.assistant_id,
+                active=client.active,
+                created_at=client.created_at,
+                updated_at=client.updated_at,
+                welcome_message=client.welcome_message,
+                business_hours=client.business_hours
+            )
         
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ Error creando cliente: {str(e)}")
+        print(f"❌ Error {'actualizando' if existing else 'creando'} cliente: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
