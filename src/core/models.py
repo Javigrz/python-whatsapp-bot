@@ -26,6 +26,7 @@ class Client(SQLModel, table=True):
     phone_number: str  # Número de teléfono (ej: +34123456789)
     phone_number_id: str = Field(index=True, unique=True)  # ID de Meta/WhatsApp
     assistant_id: str  # ID del assistant de OpenAI para este cliente
+    host_email: str  # Email del host para recibir reportes
     active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -55,4 +56,30 @@ class Thread(SQLModel, table=True):
     
     # Relaciones
     agent: Optional[Agent] = Relationship(back_populates="threads")
-    client: Optional[Client] = Relationship(back_populates="threads") 
+    client: Optional[Client] = Relationship(back_populates="threads")
+    messages: List["Message"] = Relationship(back_populates="thread")
+
+
+class Message(SQLModel, table=True):
+    """Modelo para almacenar todos los mensajes de una conversación"""
+    __tablename__ = "messages"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    thread_id: int = Field(foreign_key="threads.id")
+    
+    # Información del mensaje
+    role: str  # 'user' o 'assistant'
+    content: str  # Contenido del mensaje
+    wa_id: str  # WhatsApp ID del usuario
+    phone_number_id: Optional[str] = None  # ID del número de WhatsApp Business
+    
+    # Timestamps
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    # Metadata adicional
+    message_id: Optional[str] = None  # ID del mensaje de WhatsApp
+    status: Optional[str] = None  # sent, delivered, read, failed
+    error_message: Optional[str] = None  # Si hubo error
+    
+    # Relación
+    thread: Thread = Relationship(back_populates="messages") 
