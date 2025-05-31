@@ -33,9 +33,12 @@ async def health_check() -> Dict:
     }
 
 def start_server():
-    import uvicorn
-    port = int(os.getenv("PORT", "8000"))
-    uvicorn.run(app, host="0.0.0.0", port=port, workers=4)
+    try:
+        port = int(os.getenv("PORT", "8000"))
+        uvicorn.run("main:app", host="0.0.0.0", port=port, workers=4)
+    except Exception as e:
+        logger.error(f"Error starting server: {e}")
+        raise
 
 if __name__ == "__main__":
     start_server()

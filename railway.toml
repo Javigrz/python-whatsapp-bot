@@ -1,9 +1,13 @@
 [build]
 builder = "nixpacks"
-buildCommand = "pip install -r requirements.txt"
+buildCommand = """
+    pip install -r requirements.txt && \
+    pwd && \
+    ls -la
+"""
 
 [deploy]
-startCommand = "python -c 'from main import start_server; start_server()'"
+startCommand = "python main.py"
 healthcheckPath = "/health"
 healthcheckTimeout = 180
 restartPolicyType = "ON_FAILURE"
@@ -13,8 +17,12 @@ restartPolicyMaxRetries = 10
 nixPkgs = ["python311", "postgresql"]
 
 [[env]]
+key = "PYTHON_PATH"
+value = "."
+
+[[env]]
 key = "PYTHONPATH"
-value = "/app"
+value = "."
 
 [[env]]
 key = "DB_SSL_MODE"
