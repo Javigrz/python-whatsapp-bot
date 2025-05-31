@@ -9,6 +9,8 @@ from src.tasks import handle_message
 from typing import Optional
 import json
 
+# Force redeploy - Fixed webhook parameter issue - June 1, 2025
+
 router = APIRouter()
 
 
