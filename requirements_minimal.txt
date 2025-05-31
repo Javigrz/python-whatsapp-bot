@@ -1,0 +1,21 @@
+# DEPENDENCIAS MINIMAS PARA RAILWAY
+fastapi>=0.68.0
+uvicorn[standard]>=0.15.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+python-dotenv==1.0.0
+
+# OPCIONAL: Base de datos
+sqlmodel==0.0.14
+asyncpg==0.28.0
+SQLAlchemy==2.0.19
+greenlet==3.0.1
+
+# OPCIONAL: OpenAI
+openai==1.35.3
+
+# OPCIONAL: HTTP client
+httpx==0.25.2
+
+# OPCIONAL: Multipart
+python-multipart==0.0.6

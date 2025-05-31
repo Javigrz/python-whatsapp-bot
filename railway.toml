@@ -2,27 +2,4 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "python start.py"
-healthcheckPath = "/health"
-healthcheckTimeout = 180
-restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 10
-
-[phases.setup]
-nixPkgs = ["python311", "postgresql"]
-
-[[env]]
-key = "PYTHON_PATH"
-value = "."
-
-[[env]]
-key = "PYTHONPATH"
-value = "."
-
-[[env]]
-key = "DB_SSL_MODE"
-value = "require"
-
-[[env]]
-key = "PYTHONUNBUFFERED"
-value = "1"
+startCommand = "python app.py"
