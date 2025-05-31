@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     meta_app_id: Optional[str] = None
     app_secret: Optional[str] = None
     meta_app_secret: Optional[str] = None
-    verify_token: str = "default_verify_token"
+    verify_token: str = "13"  # Token de verificación para WhatsApp webhook
     meta_verify_token: Optional[str] = None
     version: str = "v18.0"
     phone_number_id: Optional[str] = None

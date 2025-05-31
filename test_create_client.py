@@ -4,8 +4,8 @@ import json
 
 CLIENTE = {
     "name": "released",
-    "phone_number": "+19105974590",  # Número completo con código de país
-    "phone_number_id": "595843836955426",  # ID que te da Meta después de verificar el número
+    "phone_number": "+15556383785",  # Número completo con código de país
+    "phone_number_id": "631261586727899",  # ID que te da Meta después de verificar el número
     "host_email": "jaavii.grz@gmail.com",  # Email del host para recibir reportes
     "welcome_message": "¡Hola! Soy released, el agente de IA para alquileres vacacionales, ¿En qué puedo ayudarte?",
 }

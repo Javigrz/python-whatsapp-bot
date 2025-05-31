@@ -114,10 +114,10 @@ async def webhook_handler(
                 print(f"✅ Cliente encontrado: {client.name} (ID: {client.id})")
                 # Encolar con el assistant del cliente
                 handle_message.delay(
-                    agent_id=client.assistant_id,
-                    phone_number_id=client.phone_number_id,
-                    wa_id=sender,
-                    text=body_text
+                    client.assistant_id,
+                    client.phone_number_id,
+                    sender,
+                    body_text
                 )
                 continue
             
@@ -134,20 +134,20 @@ async def webhook_handler(
                     print(f"📌 Usando assistant ID por defecto: {settings.openai_assistant_id}")
                     # Encolar con el assistant por defecto
                     handle_message.delay(
-                        agent_id=settings.openai_assistant_id,
-                        phone_number_id=phone_number_id,
-                        wa_id=sender,
-                        text=body_text
+                        settings.openai_assistant_id,
+                        phone_number_id,
+                        sender,
+                        body_text
                     )
                 continue
             
             # 4. Encolar tarea en Celery
             print(f"📤 Encolando mensaje para procesamiento...")
             handle_message.delay(
-                agent_id=agent.agent_id,
-                phone_number_id=agent.phone_number_id,
-                wa_id=sender,
-                text=body_text
+                agent.agent_id,
+                agent.phone_number_id,
+                sender,
+                body_text
             )
         
         # 5. Responder inmediatamente (< 100ms)
