@@ -1,14 +1,10 @@
 [build]
 builder = "nixpacks"
-buildCommand = """
-    mkdir -p /app && \
-    cp -r . /app/ && \
-    cd /app && \
-    pip install -r requirements.txt
-"""
 
 [deploy]
-startCommand = "cd /app && python -m uvicorn main:app --host 0.0.0.0 --port=${PORT:-8000}"
+startCommand = "uvicorn src.main:app --host 0.0.0.0 --port $PORT"
+# Si el comando de arriba falla, prueba este:
+# startCommand = "python start.py"
 healthcheckPath = "/health"
 healthcheckTimeout = 180
 restartPolicyType = "ON_FAILURE"
