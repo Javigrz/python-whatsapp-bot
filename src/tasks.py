@@ -2,7 +2,7 @@ from celery import Celery
 from sqlmodel import Session, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.core.settings import settings
-from src.core.database import get_database_manager
+from src.core.database import db_manager
 from src.core.models import Thread, Client, Agent
 from src.core.openai_client import get_openai_client, OpenAIError
 from src.core.meta_client import MetaClient, MetaError
@@ -74,7 +74,6 @@ async def _process_message_async(agent_id: str, phone_number_id: str, wa_id: str
     Lógica asíncrona para procesar mensajes.
     """
     # Obtener managers
-    db_manager = get_database_manager()
     openai_client = get_openai_client()
     meta_client = MetaClient()
     
