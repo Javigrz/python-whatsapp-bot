@@ -13,8 +13,19 @@ RUN apt-get update && \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copiar archivos de la raíz (scripts de inicio)
+COPY run_app.py .
+COPY boot.py .
+COPY start.py .
+COPY app.py .
+COPY main.py .
+COPY config.py .
+COPY Procfile .
+
+# Copiar directorios
 COPY ./src ./src
 COPY ./celery_worker ./celery_worker
 COPY ./scripts ./scripts
 
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8080"]
+# Usar el script que ya sabemos que funciona
+CMD ["python", "run_app.py"]
