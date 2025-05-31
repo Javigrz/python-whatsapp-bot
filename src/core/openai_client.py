@@ -11,13 +11,21 @@ class OpenAIError(Exception):
 
 class OpenAIClient:
     def __init__(self):
-        self.client = openai.OpenAI(
-            api_key=settings.openai_api_key,
-            default_headers={"OpenAI-Beta": "assistants=v2"}
-        )
+        self.client = None
+    
+    def _ensure_client(self):
+        """Inicializar el cliente de OpenAI de forma lazy"""
+        if self.client is None:
+            if not settings.openai_api_key:
+                raise OpenAIError("OPENAI_API_KEY no está configurada")
+            self.client = openai.OpenAI(
+                api_key=settings.openai_api_key,
+                default_headers={"OpenAI-Beta": "assistants=v2"}
+            )
     
     def create_assistant(self, faqs: List[Dict[str, str]]) -> str:
         """Crea un assistant de OpenAI con las FAQs proporcionadas"""
+        self._ensure_client()
         try:
             # Crear contenido para el assistant
             instructions = "Eres un asistente virtual que responde preguntas basándote en las siguientes FAQs:\n\n"
@@ -39,6 +47,7 @@ class OpenAIClient:
     
     def get_answer(self, agent_id: str, text: str) -> str:
         """Obtiene respuesta del assistant para el texto dado"""
+        self._ensure_client()
         try:
             # Crear thread
             thread = self.client.beta.threads.create()
@@ -79,14 +88,21 @@ class OpenAIClient:
             raise OpenAIError(f"Error obteniendo respuesta: {str(e)}")
 
 
-# Instancia global
-openai_client = OpenAIClient()
+# Instancia global (lazy initialization)
+_openai_client = None
+
+def get_openai_client() -> OpenAIClient:
+    """Obtener la instancia global del cliente OpenAI (lazy initialization)"""
+    global _openai_client
+    if _openai_client is None:
+        _openai_client = OpenAIClient()
+    return _openai_client
 
 
 # Funciones de conveniencia
 def create_assistant(faqs: List[Dict[str, str]]) -> str:
-    return openai_client.create_assistant(faqs)
+    return get_openai_client().create_assistant(faqs)
 
 
 def get_answer(agent_id: str, text: str) -> str:
-    return openai_client.get_answer(agent_id, text) 
+    return get_openai_client().get_answer(agent_id, text) 

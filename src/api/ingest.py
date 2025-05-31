@@ -3,7 +3,8 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.api.schemas import AgentCreate, AgentResponse
 from src.core.models import Agent
-from src.core import openai_client, meta_client
+from src.core import meta_client
+from src.core.openai_client import create_assistant, OpenAIError
 from src.core.settings import settings
 import asyncio
 from typing import Dict
@@ -51,7 +52,7 @@ async def create_agent(
             # 3. Crear assistant en OpenAI
             faqs_dict = [{"q": faq.q, "a": faq.a} for faq in agent_data.faqs]
             agent_id = await asyncio.to_thread(
-                openai_client.create_assistant,
+                create_assistant,
                 faqs_dict
             )
             
@@ -77,7 +78,7 @@ async def create_agent(
         raise HTTPException(status_code=504, detail="Timeout al crear agente")
     except meta_client.MetaError as e:
         raise HTTPException(status_code=400, detail=f"Error con Meta: {str(e)}")
-    except openai_client.OpenAIError as e:
+    except OpenAIError as e:
         raise HTTPException(status_code=400, detail=f"Error con OpenAI: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}") 

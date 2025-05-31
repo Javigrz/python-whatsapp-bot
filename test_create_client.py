@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+import requests
+import json
+
 CLIENTE = {
     "name": "released",
     "phone_number": "+19105974590",  # Número completo con código de país
@@ -218,8 +221,11 @@ import json
 
 # ===== CONFIGURACIÓN - MODIFICA ESTOS VALORES =====
 
-# URL de tu API (cambiar cuando esté en producción)
-API_URL = "http://localhost:8082"  # Cambiar a "https://tu-dominio.com" en producción
+# URL de tu API en Railway (en producción)
+API_URL = "https://released-production.up.railway.app"  # Tu dominio en Railway
+
+# Para desarrollo local, descomenta la siguiente línea:
+# API_URL = "http://localhost:8082"
 
 # ===== FIN DE CONFIGURACIÓN =====
 

@@ -1,0 +1,5 @@
+[variables]
+PYTHONUNBUFFERED = "1"
+
+[start]
+cmd = "python start.py"

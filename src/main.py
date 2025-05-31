@@ -8,46 +8,23 @@ import os
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Inicializar variables globales
-engine = None
-async_session = None
-
-# Intentar importar y configurar la base de datos
+# Intentar importar la configuración de base de datos
 try:
-    from sqlmodel import SQLModel
-    from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-    from sqlalchemy.orm import sessionmaker
+    from src.core.database import init_database, create_tables, health_check, close_database
+    DATABASE_AVAILABLE = True
+    logger.info("✅ Módulo de base de datos importado correctamente")
+except ImportError as e:
+    DATABASE_AVAILABLE = False
+    logger.warning(f"⚠️ Base de datos no disponible: {e}")
+
+# Intentar importar configuraciones
+            # Intentar importar configuraciones
+try:
     from src.core.settings import settings
-    
-    # Solo configurar BD si tenemos DATABASE_URL
-    if settings.database_url:
-        logger.info(f"Configurando base de datos: {settings.database_url[:50]}...")
-        database_url = str(settings.database_url)
-        if database_url.startswith('postgresql://'):
-            database_url = database_url.replace('postgresql://', 'postgresql+asyncpg://')
-        
-        engine = create_async_engine(
-            database_url,
-            echo=settings.db_echo,
-            future=True,
-            pool_size=settings.db_pool_size,
-            max_overflow=64,
-        )
-        
-        async_session = sessionmaker(
-            engine,
-            class_=AsyncSession,
-            expire_on_commit=False,
-            autocommit=False,
-            autoflush=False
-        )
-        logger.info("✅ Base de datos configurada")
-    else:
-        logger.warning("⚠️ DATABASE_URL no configurada, funcionando sin BD")
-        
+    logger.info("✅ Settings importadas")
 except Exception as e:
-    logger.error(f"❌ Error configurando base de datos: {e}")
-    logger.info("Continuando sin base de datos...")
+    logger.warning(f"⚠️ Error importando settings: {e}")
+    settings = None
 
 # Intentar importar las APIs
 try:
@@ -81,22 +58,31 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Iniciando aplicación...")
     
-    # Crear tablas solo si tenemos BD configurada
-    if engine and 'SQLModel' in globals():
+    # Inicializar base de datos si está disponible
+    if DATABASE_AVAILABLE:
         try:
-            async with engine.begin() as conn:
-                await conn.run_sync(SQLModel.metadata.create_all)
-            logger.info("✅ Tablas de base de datos creadas")
+            db_initialized = await init_database()
+            if db_initialized:
+                logger.info("✅ Base de datos inicializada")
+                tables_created = await create_tables()
+                if tables_created:
+                    logger.info("✅ Tablas creadas/verificadas")
+                else:
+                    logger.warning("⚠️ Error creando tablas")
+            else:
+                logger.warning("⚠️ No se pudo inicializar la base de datos")
         except Exception as e:
-            logger.error(f"❌ Error creando tablas: {e}")
+            logger.error(f"❌ Error en inicialización de BD: {e}")
+    else:
+        logger.info("🔄 Ejecutando sin base de datos")
     
     yield
     
     # Shutdown
     logger.info("Cerrando aplicación...")
-    if engine:
+    if DATABASE_AVAILABLE:
         try:
-            await engine.dispose()
+            await close_database()
             logger.info("✅ Conexiones de BD cerradas")
         except Exception as e:
             logger.error(f"❌ Error cerrando BD: {e}")
@@ -114,10 +100,13 @@ def create_app() -> FastAPI:
     
     # Configurar CORS
     try:
-        allowed_origins = getattr(settings, 'allowed_origins', "*")
+        allowed_origins = ["*"]
+        if settings and hasattr(settings, 'allowed_origins'):
+            allowed_origins = settings.allowed_origins.split(",") if isinstance(settings.allowed_origins, str) else ["*"]
+        
         app.add_middleware(
             CORSMiddleware,
-            allow_origins=allowed_origins.split(",") if isinstance(allowed_origins, str) else ["*"],
+            allow_origins=allowed_origins,
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],
@@ -127,20 +116,25 @@ def create_app() -> FastAPI:
         logger.error(f"❌ Error configurando CORS: {e}")
     
     # Middleware para inyectar sesión de base de datos (solo si está disponible)
-    if async_session:
-        @app.middleware("http")
-        async def db_session_middleware(request: Request, call_next):
-            try:
-                async with async_session() as session:
-                    request.state.db = session
+    if DATABASE_AVAILABLE:
+        try:
+            from src.core.database import get_session
+            
+            @app.middleware("http")
+            async def db_session_middleware(request: Request, call_next):
+                try:
+                    db_session = await get_session()
+                    request.state.db = db_session
                     response = await call_next(request)
-                    await session.commit()
+                    await db_session.close()
                     return response
-            except Exception as e:
-                logger.error(f"Error en middleware de BD: {e}")
-                request.state.db = None
-                return await call_next(request)
-        logger.info("✅ Middleware de BD configurado")
+                except Exception as e:
+                    logger.error(f"Error en middleware de BD: {e}")
+                    # Continuar sin BD si hay error
+                    request.state.db = None
+                    return await call_next(request)
+        except Exception as e:
+            logger.error(f"Error configurando middleware de BD: {e}")
     
     # Incluir routers solo si están disponibles
     if HAS_INGEST:
@@ -155,19 +149,29 @@ def create_app() -> FastAPI:
         app.include_router(clients.router, tags=["clients"])
         logger.info("✅ Router clients incluido")
     
-    # Health check básico
+    # Health check mejorado
     @app.get("/health")
-    async def health_check():
-        return {
+    async def health_check_endpoint():
+        health_status = {
             "status": "healthy", 
             "version": "1.0.0",
-            "database": "connected" if engine else "not_configured",
+            "database": "not_configured",
             "apis": {
                 "webhook": HAS_WEBHOOK,
                 "ingest": HAS_INGEST,
                 "clients": HAS_CLIENTS
             }
         }
+        
+        # Verificar estado de la base de datos
+        if DATABASE_AVAILABLE:
+            try:
+                db_healthy = await health_check()
+                health_status["database"] = "connected" if db_healthy else "error"
+            except Exception as e:
+                health_status["database"] = f"error: {str(e)}"
+        
+        return health_status
     
     # Endpoint de información básica
     @app.get("/")
