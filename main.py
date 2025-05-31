@@ -32,7 +32,10 @@ async def health_check() -> Dict:
         "database": "connected"
     }
 
-if __name__ == "__main__":
+def start_server():
     import uvicorn
     port = int(os.getenv("PORT", "8000"))
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
+    uvicorn.run(app, host="0.0.0.0", port=port, workers=4)
+
+if __name__ == "__main__":
+    start_server()
