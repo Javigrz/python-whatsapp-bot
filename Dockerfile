@@ -27,5 +27,5 @@ COPY ./src ./src
 COPY ./celery_worker ./celery_worker
 COPY ./scripts ./scripts
 
-# Usar el script que ya sabemos que funciona
-CMD ["python", "run_app.py"]
+# Usar boot.py que Railway está buscando
+CMD ["python", "boot.py"]
