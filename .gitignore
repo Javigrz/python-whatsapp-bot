@@ -1,0 +1,52 @@
+# Entornos virtuales
+venv/
+env/
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Logs
+*.log
+logs/
+
+# IDEs y editores
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Archivos de base de datos
+*.db
+*.sqlite3
+
+# Archivos de configuración sensibles
+config.ini
+*.pem
+*.key
+*.crt
+
+# Archivos específicos del bot de WhatsApp
+*.session
+*.session-journal
+whatsapp-sessions-*
