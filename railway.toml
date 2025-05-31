@@ -2,9 +2,7 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "uvicorn src.main:app --host 0.0.0.0 --port $PORT"
-# Si el comando de arriba falla, prueba este:
-# startCommand = "python start.py"
+startCommand = "python start.py"
 healthcheckPath = "/health"
 healthcheckTimeout = 180
 restartPolicyType = "ON_FAILURE"
