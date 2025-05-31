@@ -10,12 +10,14 @@ RUN apt-get update && apt-get install -y build-essential && rm -rf /var/lib/apt/
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar TODO el código fuente
+# Copiar TODO el código fuente al directorio /app
 COPY . .
 
-# Verificar que boot.py existe y es ejecutable
-RUN ls -la /app/boot.py
-RUN chmod +x /app/boot.py
+# --- Comandos de Diagnóstico en Build ---
+RUN echo "--- Listing /app contents during build ---" && ls -la /app
+RUN echo "--- Checking for /app/boot.py during build ---" && ls -la /app/boot.py || echo "boot.py not found at /app/boot.py during build"
+RUN echo "--- Verifying boot.py content during build ---" && head -5 /app/boot.py || echo "Could not read boot.py content during build"
+# --- Fin Comandos de Diagnóstico en Build ---
 
-# Usar boot.py como punto de entrada
+# Usar boot.py como punto de entrada (ahora es el script de diagnóstico)
 CMD ["python", "boot.py"]
