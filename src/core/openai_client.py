@@ -36,7 +36,7 @@ class OpenAIClient:
             
             # Crear assistant
             assistant = self.client.beta.assistants.create(
-                model="gpt-4-turbo-preview",
+                model="gpt-4o-mini",
                 instructions=instructions,
                 name="WhatsApp Business Assistant"
             )
@@ -44,6 +44,70 @@ class OpenAIClient:
             return assistant.id
         except Exception as e:
             raise OpenAIError(f"Error creando assistant: {str(e)}")
+    
+    def create_assistant_with_instructions(self, instructions: str, name: str = "WhatsApp Business Assistant") -> str:
+        """Crea un assistant de OpenAI con instrucciones personalizadas"""
+        self._ensure_client()
+        try:
+            # Crear assistant con instrucciones personalizadas
+            assistant = self.client.beta.assistants.create(
+                model="gpt-4o-mini",
+                instructions=instructions,
+                name=name
+            )
+            
+            return assistant.id
+        except Exception as e:
+            raise OpenAIError(f"Error creando assistant: {str(e)}")
+    
+    def get_answer_with_thread(self, agent_id: str, thread_id: str, text: str) -> str:
+        """Obtiene respuesta del assistant usando un thread específico"""
+        self._ensure_client()
+        try:
+            # Añadir mensaje al thread existente
+            self.client.beta.threads.messages.create(
+                thread_id=thread_id,
+                role="user",
+                content=text
+            )
+            
+            # Ejecutar assistant
+            run = self.client.beta.threads.runs.create(
+                thread_id=thread_id,
+                assistant_id=agent_id
+            )
+            
+            # Esperar a que termine
+            import time
+            while run.status in ["queued", "in_progress"]:
+                time.sleep(0.5)
+                run = self.client.beta.threads.runs.retrieve(
+                    thread_id=thread_id,
+                    run_id=run.id
+                )
+            
+            if run.status == "completed":
+                # Obtener mensajes
+                messages = self.client.beta.threads.messages.list(
+                    thread_id=thread_id,
+                    limit=1
+                )
+                # El primer mensaje es la respuesta más reciente
+                return messages.data[0].content[0].text.value
+            else:
+                raise OpenAIError(f"Run falló con estado: {run.status}")
+                
+        except Exception as e:
+            raise OpenAIError(f"Error obteniendo respuesta: {str(e)}")
+    
+    def create_thread(self) -> str:
+        """Crea un nuevo thread de conversación"""
+        self._ensure_client()
+        try:
+            thread = self.client.beta.threads.create()
+            return thread.id
+        except Exception as e:
+            raise OpenAIError(f"Error creando thread: {str(e)}")
     
     def get_answer(self, agent_id: str, text: str) -> str:
         """Obtiene respuesta del assistant para el texto dado"""
@@ -102,6 +166,10 @@ def get_openai_client() -> OpenAIClient:
 # Funciones de conveniencia
 def create_assistant(faqs: List[Dict[str, str]]) -> str:
     return get_openai_client().create_assistant(faqs)
+
+
+def create_assistant_with_instructions(instructions: str, name: str = "WhatsApp Business Assistant") -> str:
+    return get_openai_client().create_assistant_with_instructions(instructions, name)
 
 
 def get_answer(agent_id: str, text: str) -> str:

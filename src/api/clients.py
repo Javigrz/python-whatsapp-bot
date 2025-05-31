@@ -6,7 +6,7 @@ from typing import List, Optional
 from datetime import datetime
 
 from src.core.models import Client
-from src.core.openai_client import create_assistant
+from src.core.openai_client import create_assistant, create_assistant_with_instructions
 from src.api.webhook import get_session
 
 router = APIRouter()
@@ -21,7 +21,10 @@ class CreateClientRequest(BaseModel):
     name: str
     phone_number: str
     phone_number_id: str
-    faqs: List[FAQ]
+    # Opción 1: FAQs tradicionales (retrocompatibilidad)
+    faqs: Optional[List[FAQ]] = None
+    # Opción 2: Instrucciones personalizadas (nueva funcionalidad)
+    instructions: Optional[str] = None
     welcome_message: Optional[str] = None
     business_hours: Optional[str] = None
 
@@ -56,12 +59,19 @@ async def create_client(
     Crear un nuevo cliente.
     
     Proceso:
-    1. Recibe FAQs y datos del cliente
-    2. Crea un assistant en OpenAI con las FAQs
+    1. Recibe FAQs/instrucciones y datos del cliente
+    2. Crea un assistant en OpenAI 
     3. Guarda el cliente en la base de datos
     4. Retorna los datos del cliente creado
     """
     try:
+        # Validar entrada
+        if not request.faqs and not request.instructions:
+            raise HTTPException(
+                status_code=400,
+                detail="Se requieren FAQs o instrucciones personalizadas"
+            )
+        
         # Verificar si ya existe un cliente con ese phone_number_id
         result = await session.execute(
             select(Client).where(Client.phone_number_id == request.phone_number_id)
@@ -74,11 +84,18 @@ async def create_client(
                 detail=f"Ya existe un cliente con phone_number_id: {request.phone_number_id}"
             )
         
-        # Crear assistant en OpenAI con las FAQs
-        print(f"📝 Creando assistant para {request.name} con {len(request.faqs)} FAQs...")
-        faqs_dict = [{"q": faq.q, "a": faq.a} for faq in request.faqs]
-        assistant_id = create_assistant(faqs_dict)
-        print(f"✅ Assistant creado: {assistant_id}")
+        # Crear assistant en OpenAI
+        print(f"📝 Creando assistant para {request.name}...")
+        
+        if request.instructions:
+            # Usar instrucciones personalizadas
+            assistant_id = create_assistant_with_instructions(request.instructions)
+            print(f"✅ Assistant creado con instrucciones personalizadas: {assistant_id}")
+        else:
+            # Usar FAQs tradicionales
+            faqs_dict = [{"q": faq.q, "a": faq.a} for faq in request.faqs]
+            assistant_id = create_assistant(faqs_dict)
+            print(f"✅ Assistant creado con {len(request.faqs)} FAQs: {assistant_id}")
         
         # Crear cliente en la base de datos
         client = Client(

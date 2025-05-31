@@ -1,0 +1,27 @@
+{
+  "name": "Mi Negocio Personalizado",
+  "phone_number": "+34600000000",
+  "phone_number_id": "TU_PHONE_NUMBER_ID_AQUI",
+  "personality": {
+    "role": "asistente virtual especializado",
+    "tone": "profesional y cercano",
+    "specialties": [
+      "información sobre productos/servicios",
+      "atención al cliente",
+      "resolución de dudas"
+    ],
+    "greeting": "¡Hola! Soy el asistente de {business_name}. ¿En qué puedo ayudarte?",
+    "closing": "Gracias por contactar con nosotros. ¡Que tengas un excelente día!",
+    "powered_by": true
+  },
+  "knowledge_base": [
+    {
+      "q": "¿Qué servicios ofrecéis?",
+      "a": "Ofrecemos servicios personalizados de alta calidad adaptados a las necesidades de cada cliente."
+    },
+    {
+      "q": "¿Cuáles son vuestros horarios?",
+      "a": "Estamos disponibles de lunes a viernes de 9:00 a 18:00. Fuera de este horario puedes dejarnos un mensaje."
+    }
+  ]
+}
