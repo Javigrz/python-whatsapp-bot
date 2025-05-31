@@ -3,6 +3,7 @@ from database import init_db
 import logging
 from typing import Dict
 import os
+import uvicorn
 
 logger = logging.getLogger(__name__)
 app = FastAPI()
@@ -41,4 +42,5 @@ def start_server():
         raise
 
 if __name__ == "__main__":
-    start_server()
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run(app, host="0.0.0.0", port=port)
