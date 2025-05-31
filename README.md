@@ -86,7 +86,7 @@ META_APP_SECRET=93c...           # App Secret de Meta
 PHONE_NUMBER_ID=1098877...       # ID del número de WhatsApp
 
 # OpenAI
-OPENAI_API_KEY=sk-...            # API Key de OpenAI
+OPENAI_API_KEY=tu_api_key_aqui   # API Key de OpenAI
 
 # DB
 POSTGRES_USER=released
