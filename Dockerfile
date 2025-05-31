@@ -19,5 +19,5 @@ RUN echo "--- Checking for /app/boot.py during build ---" && ls -la /app/boot.py
 RUN echo "--- Verifying boot.py content during build ---" && head -5 /app/boot.py || echo "Could not read boot.py content during build"
 # --- Fin Comandos de Diagnóstico en Build ---
 
-# Usar railway_start.py en lugar de boot.py
-CMD ["python", "railway_start.py"]
+# Usar uvicorn directamente para evitar problemas con scripts
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
