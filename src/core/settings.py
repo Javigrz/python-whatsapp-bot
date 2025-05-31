@@ -1,50 +1,62 @@
 from pydantic_settings import BaseSettings
 from typing import Optional
 
-
 class Settings(BaseSettings):
-    # General
-    app_env: str = "prod"
-    port: int = 8080
-    allowed_origins: str = "*"
-    
-    # Meta - Mapeamos a los nombres que ya tienes
-    meta_access_token: str = ""
-    access_token: Optional[str] = None  # Tu variable actual
-    meta_app_secret: str = ""
-    app_secret: Optional[str] = None  # Tu variable actual
-    phone_number_id: Optional[str] = None  # Ahora es opcional, se obtiene de la BD
-    
-    # OpenAI
-    openai_api_key: str
-    openai_assistant_id: Optional[str] = None  # Para usar el assistant existente
-    
-    # DB
-    postgres_user: str = "released"
-    postgres_password: str = "released"
-    postgres_db: str = "released"
-    database_url: str = "postgresql+asyncpg://released:released@db:5432/released"
-    
-    # Celery
-    celery_broker_url: str = "redis://redis:6379/0"
-    celery_result_backend: str = "redis://redis:6379/1"
-    
-    # WhatsApp
-    verify_token: str = "13"
-    app_id: Optional[str] = None
+    # Meta API settings
+    access_token: str
+    meta_access_token: Optional[str] = None
+    app_id: str
+    meta_app_id: Optional[str] = None
+    app_secret: str
+    meta_app_secret: Optional[str] = None
+    verify_token: str
+    meta_verify_token: Optional[str] = None
     version: str = "v18.0"
+    
+    # OpenAI settings
+    openai_api_key: str
+    
+    # Database settings
+    postgres_user: str
+    postgres_password: str
+    postgres_db: str
+    postgres_host: str
+    postgres_port: str
+    database_url: Optional[str] = None
+    db_echo: bool = False
+    db_pool_size: int = 5
+    
+    # API settings
+    allowed_origins: str = "*"
+    port: int = 8082
+    api_host: str = "0.0.0.0"
+    api_port: int = 8080
+    
+    # Redis settings
+    redis_host: str = "redis"
+    redis_port: int = 6379
+    
+    # Celery settings
+    celery_broker_url: str
+    celery_result_backend: str
+    
+    # Resend settings
+    resend_api_key: Optional[str] = None
+    
+    def model_post_init(self, *args, **kwargs):
+        super().model_post_init(*args, **kwargs)
+        # Mapear variables de Meta
+        self.meta_access_token = self.access_token
+        self.meta_app_id = self.app_id
+        self.meta_app_secret = self.app_secret
+        self.meta_verify_token = self.verify_token
+        
+        # Configurar URL de base de datos
+        self.database_url = f"postgresql://{self.postgres_user}:{self.postgres_password}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
 
     class Config:
         env_file = ".env"
         case_sensitive = False
-    
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        # Mapear las variables antiguas a las nuevas si existen
-        if self.access_token and not self.meta_access_token:
-            self.meta_access_token = self.access_token
-        if self.app_secret and not self.meta_app_secret:
-            self.meta_app_secret = self.app_secret
+        env_file_encoding = 'utf-8'
 
-
-settings = Settings() 
+settings = Settings()

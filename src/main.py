@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from sqlmodel import SQLModel
@@ -12,16 +12,22 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Motor de base de datos
+# Configuración del motor de base de datos
 engine = create_async_engine(
-    settings.database_url,
-    echo=False,
-    future=True
+    str(settings.database_url).replace('postgresql://', 'postgresql+asyncpg://'),
+    echo=settings.db_echo,
+    future=True,
+    pool_size=settings.db_pool_size,
+    max_overflow=64,
 )
 
 # Session maker
 async_session = sessionmaker(
-    engine, class_=AsyncSession, expire_on_commit=False
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autocommit=False,
+    autoflush=False
 )
 
 
@@ -48,7 +54,8 @@ def create_app() -> FastAPI:
         title="Released WhatsApp Bot API",
         version="1.0.0",
         description="API para gestionar bots de WhatsApp Business",
-        lifespan=lifespan
+        lifespan=lifespan,
+        root_path="" # Añadido para manejar correctamente el proxy
     )
     
     # Configurar CORS
@@ -87,5 +94,13 @@ app = create_app()
 
 
 # Dependency para obtener la sesión de BD
-async def get_session(request: Request) -> AsyncSession:
-    return request.state.db 
+async def get_db():
+    async with async_session() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
