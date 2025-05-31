@@ -7,3 +7,6 @@ sqlmodel>=0.0.14
 sqlalchemy>=2.0.0
 requests>=2.28.0
 openai>=1.0.0
+asyncpg>=0.28.0
+celery>=5.3.0
+redis>=4.5.0
