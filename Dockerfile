@@ -19,5 +19,5 @@ RUN echo "--- Checking for /app/boot.py during build ---" && ls -la /app/boot.py
 RUN echo "--- Verifying boot.py content during build ---" && head -5 /app/boot.py || echo "Could not read boot.py content during build"
 # --- Fin Comandos de Diagnóstico en Build ---
 
-# Usar boot.py como punto de entrada (ahora es el script de diagnóstico)
-CMD ["python", "boot.py"]
+# Usar railway_start.py en lugar de boot.py
+CMD ["python", "railway_start.py"]
