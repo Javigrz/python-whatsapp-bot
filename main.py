@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from database import init_db
 import logging
 from typing import Dict
+import os
 
 logger = logging.getLogger(__name__)
 app = FastAPI()
@@ -31,4 +32,7 @@ async def health_check() -> Dict:
         "database": "connected"
     }
 
-# ...existing code...
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
