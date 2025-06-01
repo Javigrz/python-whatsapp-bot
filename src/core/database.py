@@ -25,18 +25,16 @@ class DatabaseManager:
         database_url = os.getenv('DATABASE_URL')
         
         if database_url:
-            # Para Railway, asegurar que usamos psycopg2 (síncrono) y SSL
+            # Para Railway, asegurar que usamos psycopg2 (síncrono)
             if database_url.startswith('postgresql://'):
-                # Asegurar que tenemos los parámetros SSL correctos para Railway
+                # Para Railway, probar sin SSL primero
                 if 'railway' in database_url or os.getenv('RAILWAY_ENVIRONMENT'):
                     if '?' not in database_url:
-                        database_url = database_url + "?sslmode=require&sslcert=&sslkey=&sslrootcert="
+                        database_url = database_url + "?sslmode=disable"
                     else:
                         # Agregar parámetros SSL si no existen
                         if 'sslmode' not in database_url:
-                            database_url = database_url + "&sslmode=require"
-                        if 'sslcert' not in database_url:
-                            database_url = database_url + "&sslcert=&sslkey=&sslrootcert="
+                            database_url = database_url + "&sslmode=disable"
                 
             logger.info("Usando DATABASE_URL de Railway")
             return database_url
@@ -68,7 +66,7 @@ class DatabaseManager:
             # Para Railway en producción - configurar SSL
             if os.getenv('RAILWAY_ENVIRONMENT') == 'production' or 'railway' in database_url.lower():
                 connect_args = {
-                    "sslmode": "require",
+                    "sslmode": "disable",
                     "options": "-c timezone=UTC",
                     "application_name": "whatsapp-bot-railway"
                 }
@@ -96,11 +94,11 @@ class DatabaseManager:
                     result = conn.execute(text("SELECT 1"))
                     result.fetchone()
             except Exception as ssl_error:
-                logger.warning(f"Error de conexión SSL: {ssl_error}")
-                # Intentar con configuración SSL más permisiva
-                if 'sslmode=require' in database_url:
-                    logger.info("Intentando con sslmode=prefer...")
-                    database_url_fallback = database_url.replace('sslmode=require', 'sslmode=prefer')
+                logger.warning(f"Error de conexión: {ssl_error}")
+                # Intentar con sslmode=allow como fallback
+                if 'sslmode=disable' in database_url:
+                    logger.info("Intentando con sslmode=allow...")
+                    database_url_fallback = database_url.replace('sslmode=disable', 'sslmode=allow')
                     self.engine = create_engine(
                         database_url_fallback,
                         echo=os.getenv('DB_ECHO', 'False').lower() == 'true',
@@ -108,7 +106,7 @@ class DatabaseManager:
                         pool_recycle=300,
                         pool_size=int(os.getenv('DB_POOL_SIZE', '5')),
                         max_overflow=int(os.getenv('DB_MAX_OVERFLOW', '10')),
-                        connect_args={"sslmode": "prefer"}
+                        connect_args={"sslmode": "allow"}
                     )
                     self.SessionLocal = sessionmaker(
                         autocommit=False,
