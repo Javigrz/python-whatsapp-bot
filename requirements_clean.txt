@@ -9,7 +9,7 @@ pydantic-settings==2.1.0
 
 # Database - OPCIONALES
 sqlmodel==0.0.14
-asyncpg==0.28.0
+psycopg2-binary>=2.9.0
 SQLAlchemy==2.0.19
 alembic==1.13.0
 greenlet==3.0.1

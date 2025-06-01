@@ -8,7 +8,7 @@ os.environ["META_ACCESS_TOKEN"] = "test_token"
 os.environ["META_APP_SECRET"] = "test_secret"
 os.environ["PHONE_NUMBER_ID"] = "test_phone_id"
 os.environ["OPENAI_API_KEY"] = "test_openai_key"
-os.environ["DATABASE_URL"] = "postgresql+asyncpg://test:test@localhost:5432/test"
+os.environ["DATABASE_URL"] = "postgresql://test:test@localhost:5432/test"
 
 
 @pytest.fixture(scope="session")

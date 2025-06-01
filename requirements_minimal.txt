@@ -7,7 +7,7 @@ python-dotenv==1.0.0
 
 # OPCIONAL: Base de datos
 sqlmodel==0.0.14
-asyncpg==0.28.0
+psycopg2-binary==2.9.0
 SQLAlchemy==2.0.19
 greenlet==3.0.1
 

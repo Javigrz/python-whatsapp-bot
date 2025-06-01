@@ -61,10 +61,10 @@ async def lifespan(app: FastAPI):
     # Inicializar base de datos si está disponible
     if DATABASE_AVAILABLE:
         try:
-            db_initialized = await init_database()
+            db_initialized = init_database()
             if db_initialized:
                 logger.info("✅ Base de datos inicializada")
-                tables_created = await create_tables()
+                tables_created = create_tables()
                 if tables_created:
                     logger.info("✅ Tablas creadas/verificadas")
                 else:
@@ -82,7 +82,7 @@ async def lifespan(app: FastAPI):
     logger.info("Cerrando aplicación...")
     if DATABASE_AVAILABLE:
         try:
-            await close_database()
+            close_database()
             logger.info("✅ Conexiones de BD cerradas")
         except Exception as e:
             logger.error(f"❌ Error cerrando BD: {e}")
@@ -123,10 +123,10 @@ def create_app() -> FastAPI:
             @app.middleware("http")
             async def db_session_middleware(request: Request, call_next):
                 try:
-                    db_session = await get_session()
+                    db_session = get_session()
                     request.state.db = db_session
                     response = await call_next(request)
-                    await db_session.close()
+                    db_session.close()
                     return response
                 except Exception as e:
                     logger.error(f"Error en middleware de BD: {e}")
@@ -166,7 +166,7 @@ def create_app() -> FastAPI:
         # Verificar estado de la base de datos
         if DATABASE_AVAILABLE:
             try:
-                db_healthy = await health_check()
+                db_healthy = health_check()
                 health_status["database"] = "connected" if db_healthy else "error"
             except Exception as e:
                 health_status["database"] = f"error: {str(e)}"
@@ -190,17 +190,13 @@ def create_app() -> FastAPI:
 app = create_app()
 
 # Dependency para obtener la sesión de BD (solo si está disponible)
-async def get_db():
-    if not async_session:
-        yield None
-        return
+def get_db_dependency():
+    """Dependency para inyectar sesión de base de datos en endpoints"""
+    if not DATABASE_AVAILABLE:
+        return None
     
-    async with async_session() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
-        finally:
-            await session.close()
+    db = get_session()
+    try:
+        yield db
+    finally:
+        db.close()

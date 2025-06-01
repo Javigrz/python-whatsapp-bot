@@ -1,12 +1,10 @@
 from celery import Celery
 from sqlmodel import Session, select
-from sqlmodel.ext.asyncio.session import AsyncSession
 from src.core.settings import settings
 from src.core.database import db_manager
 from src.core.models import Thread, Client, Agent
 from src.core.openai_client import get_openai_client, OpenAIError
 from src.core.meta_client import MetaClient, MetaError
-import asyncio
 import logging
 
 # Configurar logging
@@ -45,18 +43,10 @@ def handle_message(self, agent_id: str, phone_number_id: str, wa_id: str, text: 
     try:
         logger.info(f"🤖 Procesando mensaje de {wa_id}: {text}")
         
-        # Ejecutar la lógica asíncrona en un loop de evento
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        
-        try:
-            response = loop.run_until_complete(
-                _process_message_async(agent_id, phone_number_id, wa_id, text)
-            )
-            logger.info(f"✅ Mensaje procesado exitosamente para {wa_id}")
-            return response
-        finally:
-            loop.close()
+        # Procesar mensaje de forma síncrona
+        response = _process_message_sync(agent_id, phone_number_id, wa_id, text)
+        logger.info(f"✅ Mensaje procesado exitosamente para {wa_id}")
+        return response
             
     except Exception as e:
         logger.error(f"❌ Error procesando mensaje: {str(e)}")
@@ -69,17 +59,17 @@ def handle_message(self, agent_id: str, phone_number_id: str, wa_id: str, text: 
             return {"status": "failed", "error": str(e)}
 
 
-async def _process_message_async(agent_id: str, phone_number_id: str, wa_id: str, text: str):
+def _process_message_sync(agent_id: str, phone_number_id: str, wa_id: str, text: str):
     """
-    Lógica asíncrona para procesar mensajes.
+    Lógica síncrona para procesar mensajes.
     """
     # Obtener managers
     openai_client = get_openai_client()
     meta_client = MetaClient()
     
-    async with db_manager.get_session() as session:
+    with db_manager.get_session() as session:
         # 1. Buscar o crear thread para este usuario
-        thread_id = await _get_or_create_thread(session, wa_id, agent_id, phone_number_id)
+        thread_id = _get_or_create_thread(session, wa_id, agent_id, phone_number_id)
         
         if not thread_id:
             raise Exception("No se pudo obtener o crear thread")
@@ -121,11 +111,11 @@ async def _process_message_async(agent_id: str, phone_number_id: str, wa_id: str
                     # 6. Procesar texto para WhatsApp (limpiar formato)
                     response_text = _process_text_for_whatsapp(response_text)
                     
-                    # 7. Enviar respuesta a WhatsApp
-                    await meta_client.send_message(phone_number_id, wa_id, response_text)
+                    # 7. Enviar respuesta a WhatsApp (usando método síncrono)
+                    meta_client.send_message_sync(phone_number_id, wa_id, response_text)
                     
                     # 8. Actualizar timestamp del thread
-                    await _update_thread_timestamp(session, wa_id, agent_id)
+                    _update_thread_timestamp(session, wa_id, agent_id)
                     
                     logger.info(f"📤 Respuesta enviada a {wa_id}: {response_text[:50]}...")
                     
@@ -143,20 +133,20 @@ async def _process_message_async(agent_id: str, phone_number_id: str, wa_id: str
             logger.error(f"❌ Error OpenAI: {str(e)}")
             # Enviar mensaje de error genérico al usuario
             error_msg = "Disculpa, estoy experimentando dificultades técnicas. Por favor, intenta de nuevo en unos minutos."
-            await meta_client.send_message(phone_number_id, wa_id, error_msg)
+            meta_client.send_message_sync(phone_number_id, wa_id, error_msg)
             raise e
         except MetaError as e:
             logger.error(f"❌ Error Meta: {str(e)}")
             raise e
 
 
-async def _get_or_create_thread(session: AsyncSession, wa_id: str, agent_id: str, phone_number_id: str) -> str:
+def _get_or_create_thread(session: Session, wa_id: str, agent_id: str, phone_number_id: str) -> str:
     """
     Busca un thread existente para el usuario o crea uno nuevo.
     """
     # Buscar thread existente por wa_id y assistant
     # Primero intentar buscar por cliente
-    result = await session.execute(
+    result = session.execute(
         select(Thread, Client).join(Client).where(
             Thread.wa_id == wa_id,
             Client.assistant_id == agent_id,
@@ -172,7 +162,7 @@ async def _get_or_create_thread(session: AsyncSession, wa_id: str, agent_id: str
         return thread.thread_id
     
     # Si no se encuentra por cliente, buscar por agent (compatibilidad)
-    result = await session.execute(
+    result = session.execute(
         select(Thread, Agent).join(Agent).where(
             Thread.wa_id == wa_id,
             Agent.agent_id == agent_id,
@@ -194,7 +184,7 @@ async def _get_or_create_thread(session: AsyncSession, wa_id: str, agent_id: str
         new_thread = openai_client.client.beta.threads.create()
         
         # Buscar el cliente o agent para asociar el thread
-        client_result = await session.execute(
+        client_result = session.execute(
             select(Client).where(
                 Client.assistant_id == agent_id,
                 Client.phone_number_id == phone_number_id,
@@ -212,7 +202,7 @@ async def _get_or_create_thread(session: AsyncSession, wa_id: str, agent_id: str
             )
         else:
             # Buscar agent para compatibilidad
-            agent_result = await session.execute(
+            agent_result = session.execute(
                 select(Agent).where(
                     Agent.agent_id == agent_id,
                     Agent.phone_number_id == phone_number_id
@@ -234,7 +224,7 @@ async def _get_or_create_thread(session: AsyncSession, wa_id: str, agent_id: str
                 )
         
         session.add(db_thread)
-        await session.commit()
+        session.commit()
         
         logger.info(f"🆕 Nuevo thread creado para {wa_id}: {new_thread.id}")
         return new_thread.id
@@ -244,7 +234,7 @@ async def _get_or_create_thread(session: AsyncSession, wa_id: str, agent_id: str
         raise e
 
 
-async def _update_thread_timestamp(session: AsyncSession, wa_id: str, agent_id: str):
+def _update_thread_timestamp(session: Session, wa_id: str, agent_id: str):
     """
     Actualiza el timestamp del último mensaje del thread.
     """
@@ -252,7 +242,7 @@ async def _update_thread_timestamp(session: AsyncSession, wa_id: str, agent_id: 
         from datetime import datetime
         
         # Buscar thread por cliente
-        result = await session.execute(
+        result = session.execute(
             select(Thread).join(Client).where(
                 Thread.wa_id == wa_id,
                 Client.assistant_id == agent_id,
@@ -263,7 +253,7 @@ async def _update_thread_timestamp(session: AsyncSession, wa_id: str, agent_id: 
         
         if not thread:
             # Buscar por agent (compatibilidad)
-            result = await session.execute(
+            result = session.execute(
                 select(Thread).join(Agent).where(
                     Thread.wa_id == wa_id,
                     Agent.agent_id == agent_id
@@ -273,7 +263,7 @@ async def _update_thread_timestamp(session: AsyncSession, wa_id: str, agent_id: 
         
         if thread:
             thread.last_message_at = datetime.utcnow()
-            await session.commit()
+            session.commit()
             
     except Exception as e:
         logger.error(f"❌ Error actualizando timestamp: {str(e)}")

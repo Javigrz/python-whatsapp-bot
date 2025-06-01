@@ -92,7 +92,7 @@ OPENAI_API_KEY=tu_api_key_aqui   # API Key de OpenAI
 POSTGRES_USER=released
 POSTGRES_PASSWORD=released
 POSTGRES_DB=released
-DATABASE_URL=postgresql+asyncpg://released:released@db:5432/released
+DATABASE_URL=postgresql://released:released@db:5432/released
 
 # Celery
 CELERY_BROKER_URL=redis://redis:6379/0

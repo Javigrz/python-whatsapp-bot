@@ -88,6 +88,34 @@ class MetaClient:
         except Exception as e:
             raise MetaError(f"Error en envío: {str(e)}")
     
+    def send_message_sync(self, phone_number_id: str, wa_id: str, text: str) -> None:
+        """Envía un mensaje de texto a través de WhatsApp (versión síncrona)"""
+        import requests
+        
+        try:
+            response = requests.post(
+                f"{self.base_url}/{phone_number_id}/messages",
+                headers={
+                    "Authorization": f"Bearer {self.access_token}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "messaging_product": "whatsapp",
+                    "to": wa_id,
+                    "type": "text",
+                    "text": {"body": text}
+                },
+                timeout=10.0
+            )
+            
+            if response.status_code != 200:
+                raise MetaError(f"Error enviando mensaje: {response.text}")
+                
+        except requests.Timeout:
+            raise MetaError("Timeout al enviar mensaje")
+        except requests.RequestException as e:
+            raise MetaError(f"Error en envío: {str(e)}")
+    
     def verify_webhook_signature(self, payload: bytes, signature: str) -> bool:
         """Verifica la firma del webhook de Meta"""
         expected_signature = hmac.new(
@@ -117,4 +145,4 @@ async def send_message(phone_number_id: str, wa_id: str, text: str) -> None:
 
 
 def verify_webhook_signature(payload: bytes, signature: str) -> bool:
-    return meta_client.verify_webhook_signature(payload, signature) 
+    return meta_client.verify_webhook_signature(payload, signature)
